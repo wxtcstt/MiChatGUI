@@ -1,0 +1,2 @@
+# MiChatGUI
+使用PyQt5封装了小米音箱连接ChatGPT的客户端
