@@ -204,6 +204,7 @@ UserCustomBot.result=response.content.decode('utf8')")
         elif  self.ApiMode==2:
             result=UserCustomBot.ask(query,self.customcode_input.toPlainText())
             print(result)
+            return result
         elif  self.ApiMode==3:
            result=WXTChatBot.ask(query)
            return result
