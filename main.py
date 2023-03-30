@@ -27,7 +27,8 @@ from usercustombot  import UserCustomBot
 
         
 class LoginWindow(QWidget):
-    alert = pyqtSignal(str) # 自定义信号
+    alert = pyqtSignal(str) 
+    logevent=pyqtSignal(str)
     def __init__(self):
         super().__init__()
 
@@ -74,6 +75,9 @@ class LoginWindow(QWidget):
         pixmap = QPixmap('fox.png')
         pixmap = pixmap.scaledToHeight(imagesize)
         img_label.setPixmap(pixmap)
+        self.logtext= QTextEdit()
+    
+        
         
         service_select_box = QHBoxLayout()
         rb1 = QRadioButton('OpenAI', self)
@@ -101,18 +105,19 @@ class LoginWindow(QWidget):
         #图片水平排列
         image_layout = QHBoxLayout()
         image_layout.addWidget(img_label)
+        image_layout.addWidget(self.logtext)
         # image_layout.addWidget(zhifubao_label)
         #测试你的服务器
         test_label = QLabel('测试一下你的服务器')
         testServiceLayout=QVBoxLayout()
-        self.askresult = QTextEdit()
+       
         self.testAsk=QLineEdit()
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
         testServiceLayout.addWidget(line)
         testServiceLayout.addWidget(test_label)
-        testServiceLayout.addWidget(self.askresult)
+     
         askLayout=QHBoxLayout()
         askLayout.addWidget( self.testAsk)
         self.testAskSend=QPushButton("发送")
@@ -138,13 +143,25 @@ class LoginWindow(QWidget):
         self.ApiMode=1 #1 openapi 2 自定义服务 3 作者的测试服务器
         self.chatgpt_bot=ChatGPTBot(self.openaikey_input.text())
         self.alert.connect(self.deviceInvalid) #
+        self.logevent.connect(self.logPrint) #
+        
     
-    
+    def logPrint(self,msg):
+        result=self.logtext.toPlainText()+msg+"\n"
+        linarray=result.split("\n")
+        if len(linarray)>10:
+            linarray=linarray[-10:]
+        result="\n".join([item  for item in linarray if item])
+        # # if result[-1]!="\n":
+        result+="\n"
+        self.logtext.setText(result)
+        
     def on_testAskSend_clicked(self):
         if(self.testAsk.text()!=""):
             print(self.testAsk.text())
             result=self.ask(self.testAsk.text())
-            self.askresult.setText(result)
+            
+            self.logPrint(result)
             self.testAsk.setText("")
                         
         
@@ -207,7 +224,7 @@ UserCustomBot.result=response.content.decode('utf8')")
         elif  self.ApiMode==2:
             result=UserCustomBot.ask(query,self.customcode_input.toPlainText())
             print(result)
-            return result
+            return  result
     def clear(self):
         if self.ApiMode==1:
             result=self.chatgpt_bot.clear()
@@ -359,7 +376,9 @@ UserCustomBot.result=response.content.decode('utf8')")
                     chatmsg=await r.json()
                     new_timestamp, last_record = self.get_last_timestamp_and_record(chatmsg)
                     print("最后的问答：",last_record)
+                    self.logevent.emit(last_record)
                     if last_record and new_timestamp>lastTimeStamp:
+                       
                         await asyncio.sleep(0.5)    
                         lastTimeStamp=new_timestamp
                         if await get_if_xiaoai_is_playing():
@@ -374,8 +393,13 @@ UserCustomBot.result=response.content.decode('utf8')")
                         elif "停止" in last_record or "休息一下" in last_record:
                              await service.text_to_speech(deviceid, "好的")
                         else:
-                            message+=self.ask(last_record)  
-                            await service.text_to_speech(deviceid, message)
+                            await service.text_to_speech(deviceid, "正在问大哥GPT请等待")
+                            gpt_result=self.ask(last_record) 
+                            if gpt_result=="-1":
+                                 await service.text_to_speech(deviceid, "出错了无法获取GPT消息")
+                            else:
+                                message+=gpt_result
+                                await service.text_to_speech(deviceid, message)
                         
                         while True:
                             if not await get_if_xiaoai_is_playing():
