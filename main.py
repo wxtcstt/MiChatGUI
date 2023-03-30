@@ -149,8 +149,8 @@ class LoginWindow(QWidget):
     def logPrint(self,msg):
         result=self.logtext.toPlainText()+msg+"\n"
         linarray=result.split("\n")
-        if len(linarray)>10:
-            linarray=linarray[-10:]
+        if len(linarray)>20:
+            linarray=linarray[-20:]
         result="\n".join([item  for item in linarray if item])
         # # if result[-1]!="\n":
         result+="\n"
@@ -361,6 +361,7 @@ UserCustomBot.result=response.content.decode('utf8')")
                 if not deviceid:
                     self.alert.emit("没有找到你的音箱")
                     return 0
+                self.logevent.emit("找到了你的音箱:"+deviceid)
                 async def get_if_xiaoai_is_playing(): #测试音乐播放
                             playing_info = await service.player_get_status(deviceid)
                             is_playing = (
@@ -407,6 +408,7 @@ UserCustomBot.result=response.content.decode('utf8')")
                             await asyncio.sleep(0.5)
                     await asyncio.sleep(0.5)                 
         except Exception as e:
+            self.logevent.emit(str(e))
             print(e)
             time.sleep(2)
             self.loopflag=True
