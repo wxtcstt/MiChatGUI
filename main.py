@@ -1,5 +1,6 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout,QRadioButton,QDesktopWidget,QTextEdit,QFrame
+from PyQt5.QtCore import  pyqtSignal
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout,QRadioButton,QDesktopWidget,QTextEdit,QFrame,QMessageBox
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtGui import QIcon
 from pathlib import Path
@@ -26,6 +27,7 @@ from usercustombot  import UserCustomBot
 
         
 class LoginWindow(QWidget):
+    alert = pyqtSignal(str) # 自定义信号
     def __init__(self):
         super().__init__()
 
@@ -135,6 +137,7 @@ class LoginWindow(QWidget):
         self.center_window()
         self.ApiMode=1 #1 openapi 2 自定义服务 3 作者的测试服务器
         self.chatgpt_bot=ChatGPTBot(self.openaikey_input.text())
+        self.alert.connect(self.deviceInvalid) #
     
     
     def on_testAskSend_clicked(self):
@@ -204,16 +207,11 @@ UserCustomBot.result=response.content.decode('utf8')")
         elif  self.ApiMode==2:
             result=UserCustomBot.ask(query,self.customcode_input.toPlainText())
             print(result)
-            return result
-        elif  self.ApiMode==3:
-           result=WXTChatBot.ask(query)
-           return result
     def clear(self):
         if self.ApiMode==1:
             result=self.chatgpt_bot.clear()
         elif  self.ApiMode==3:
-           result=WXTChatBot.clear()
-           return result       
+          pass    
            
         
     def radioClicked(self):
@@ -306,7 +304,11 @@ UserCustomBot.result=response.content.decode('utf8')")
             cookies_dict[k] = m.value
             cookiejar = cookiejar_from_dict(cookies_dict, cookiejar=None, overwrite=True)
         return cookiejar
-
+    def  deviceInvalid(self):
+        self.started=False
+        self.login_button.setText("开始")
+        QMessageBox.warning(self,"警告","没有找到你的音箱")
+        
     async def xiaomimain(self):
         try:
             #-------------------------用户配置
@@ -338,6 +340,9 @@ UserCustomBot.result=response.content.decode('utf8')")
                     user_id=user_id,
                     )
                     cookie = self.parse_cookie_string(cookiestr)
+                if not deviceid:
+                    self.alert.emit("没有找到你的音箱")
+                    return 0
                 async def get_if_xiaoai_is_playing(): #测试音乐播放
                             playing_info = await service.player_get_status(deviceid)
                             is_playing = (
