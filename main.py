@@ -207,6 +207,7 @@ UserCustomBot.result=response.content.decode('utf8')")
         elif  self.ApiMode==2:
             result=UserCustomBot.ask(query,self.customcode_input.toPlainText())
             print(result)
+            return result
     def clear(self):
         if self.ApiMode==1:
             result=self.chatgpt_bot.clear()
