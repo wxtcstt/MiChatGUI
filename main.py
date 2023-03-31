@@ -179,8 +179,9 @@ class LoginWindow(QWidget):
         if(self.testAsk.text()!=""):
             print(self.testAsk.text())
             # 使用Lambda函数创建线程
+            print(self.testaskthread.isAlive() if self.testaskthread else "")
             if  self.testaskthread==None or not self.testaskthread.isAlive():
-                self.testaskthread = Thread(target=self.test_asl_threadfunc, args=(self.testAsk.text,))
+                self.testaskthread = Thread(target=self.test_asl_threadfunc, args=(self.testAsk.text(),))
                 self.testaskthread.start()           
         
     def createOpenAIConfigPanel(self):
