@@ -144,6 +144,7 @@ class LoginWindow(QWidget):
         self.chatgpt_bot=ChatGPTBot(self.openaikey_input.text())
         self.alert.connect(self.deviceInvalid) #
         self.logevent.connect(self.logPrint) #
+        self.testaskthread=None
         
     
     def logPrint(self,msg):
@@ -155,15 +156,32 @@ class LoginWindow(QWidget):
         # # if result[-1]!="\n":
         result+="\n"
         self.logtext.setText(result)
+    
+    def run_thread(self,task, args):
+        thread = Thread(target=task, args=args)
+        thread.start()
+        return thread
+    
+    def test_asl_threadfunc(self,query):
+        try:
+            result=self.ask(query)
+            # self.logPrint(result)
+            if result=="-1":
+                self.logevent.emit("无法连接ChatGPT服务器这可能是你的网络代理的问题")
+            else:
+                self.logevent.emit(result)
+            self.testAsk.setText("")
+        except Exception as e:
+            print(e)
+        
         
     def on_testAskSend_clicked(self):
         if(self.testAsk.text()!=""):
             print(self.testAsk.text())
-            result=self.ask(self.testAsk.text())
-            
-            self.logPrint(result)
-            self.testAsk.setText("")
-                        
+            # 使用Lambda函数创建线程
+            if  self.testaskthread==None or not self.testaskthread.isAlive():
+                self.testaskthread = Thread(target=self.test_asl_threadfunc, args=(self.testAsk.text,))
+                self.testaskthread.start()           
         
     def createOpenAIConfigPanel(self):
         panel=QWidget()
@@ -221,6 +239,7 @@ UserCustomBot.result=response.content.decode('utf8')")
     def ask(self,query):
         if self.ApiMode==1:
             result=self.chatgpt_bot.ask(query)
+            return result
         elif  self.ApiMode==2:
             result=UserCustomBot.ask(query,self.customcode_input.toPlainText())
             print(result)
@@ -379,7 +398,7 @@ UserCustomBot.result=response.content.decode('utf8')")
                     print("最后的问答：",last_record)
                     self.logevent.emit(last_record)
                     if last_record and new_timestamp>lastTimeStamp:
-                       
+                        self.logevent.emit("发现新消息，送往GPT请求问答")
                         await asyncio.sleep(0.5)    
                         lastTimeStamp=new_timestamp
                         if await get_if_xiaoai_is_playing():
@@ -388,18 +407,22 @@ UserCustomBot.result=response.content.decode('utf8')")
                         await service.text_to_speech(deviceid, '')
                         message=""
                         if "清除消息" in last_record:
-                                message="GPT 清除历史消息"
+                                message="GPT清除历史消息"
+                                self.logevent.emit("GPT清除历史消息")
                                 await service.text_to_speech(deviceid, message)
                                 self.clear()
                         elif "停止" in last_record or "休息一下" in last_record:
-                             await service.text_to_speech(deviceid, "好的")
+                            self.logevent.emit("好的")
+                            await service.text_to_speech(deviceid, "好的")
                         else:
                             await service.text_to_speech(deviceid, "正在问大哥GPT请等待")
                             gpt_result=self.ask(last_record) 
                             if gpt_result=="-1":
-                                 await service.text_to_speech(deviceid, "出错了无法获取GPT消息")
+                                self.logevent.emit("出错了无法获取GPT消息")
+                                await service.text_to_speech(deviceid, "出错了无法获取GPT消息")
                             else:
                                 message+=gpt_result
+                                self.logevent.emit(message)
                                 await service.text_to_speech(deviceid, message)
                         
                         while True:
