@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtCore import  pyqtSignal
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout,QRadioButton,QDesktopWidget,QTextEdit,QFrame,QMessageBox
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QHBoxLayout, QVBoxLayout,QRadioButton,QDesktopWidget,QTextEdit,QFrame,QMessageBox,QButtonGroup
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtGui import QIcon
 from pathlib import Path
@@ -8,6 +8,8 @@ import os
 import json
 from miaccount   import   MiAccount
 from minaservice import   MiNAService
+from miioservice import   MiIOService
+from miiocommand import  miio_command
 from aiohttp     import   ClientSession
 from pathlib     import   Path
 import os
@@ -33,14 +35,26 @@ class LoginWindow(QWidget):
         super().__init__()
 
         # 设置窗口标题和大小
-        self.setWindowTitle('小米音箱服务')
-        self.resize(600, 200)
-
+        self.setWindowTitle('小米音箱服务 github库名字MiChatGUI')
+        
+        connectmode_select_box = QHBoxLayout()
+        connectmode_selectbg = QButtonGroup()
+        self.connectrb1 = QRadioButton('接入方式1')
+        self.connectrb1.setChecked(True)
+        connectmode_select_box.addWidget(self.connectrb1)
+        self.connectrb2 = QRadioButton('接入方式2')
+        connectmode_select_box.addWidget(self.connectrb2)
+        connectmode_select_box.addStretch()
+        self.connectrb1.clicked.connect(self.connect_mode_select)
+        self.connectrb2.clicked.connect(self.connect_mode_select)
+        connectmode_selectbg.addButton(self.connectrb1)
+        connectmode_selectbg.addButton(self.connectrb2)
         # 创建用于输入用户名、密码和设备型号的文本输入框
         self.username_input = QLineEdit()
         self.password_input = QLineEdit()
         self.device_input = QLineEdit()
-
+        self.did_input = QLineEdit()
+        self.tts_input=QLineEdit()
         # 将密码输入框设置为密码模式
         self.password_input.setEchoMode(QLineEdit.Password)
 
@@ -48,7 +62,8 @@ class LoginWindow(QWidget):
         username_label = QLabel('你的ID:')
         password_label = QLabel('你的密码:')
         device_label = QLabel('你的设备型号:')
-
+        self.did_label = QLabel('DID(设备ID):')
+        self.tts_input_label = QLabel('语音命令:')
         # 创建登录按钮
         self.login_button = QPushButton('开始')
 
@@ -67,8 +82,16 @@ class LoginWindow(QWidget):
         input_layout.addWidget(self.device_input)
         input_layout.addWidget(speaker_label)
         input_layout.addWidget(self.speaker_input )
+        input_layout.addWidget( self.did_label)
+        input_layout.addWidget(self.did_input)
+        input_layout.addWidget( self.tts_input_label)
+        input_layout.addWidget(self.tts_input)
+        self.did_label.hide()
+        self.did_input.hide()
+        self.tts_input_label.hide()
+        self.tts_input.hide()
         input_layout.addWidget(self.login_button)
-       
+        
         # 创建用于显示图片的标签
         imagesize=200
         img_label = QLabel(self)
@@ -80,17 +103,19 @@ class LoginWindow(QWidget):
         
         
         service_select_box = QHBoxLayout()
-        rb1 = QRadioButton('OpenAI', self)
+        rb1 = QRadioButton('OpenAI')
         rb1.setChecked(True)
         service_select_box.addWidget(rb1)
-        rb2 = QRadioButton('你的自定义服务', self)
+        rb2 = QRadioButton('你的自定义服务')
         service_select_box.addWidget(rb2)
         #rb3 = QRadioButton('作者的免费测试(仅限最多50个问题)', self)
         #service_select_box.addWidget(rb3)
         service_select_box.addStretch()
         rb1.clicked.connect(self.radioClicked)
         rb2.clicked.connect(self.radioClicked)
-        #rb3.clicked.connect(self.radioClicked)
+        self.service_selectbg = QButtonGroup()
+        self.service_selectbg.addButton(rb1)
+        self.service_selectbg.addButton(rb2)
         #服务的设置
         service_config_box = QHBoxLayout()
         self.openai_config=self.createOpenAIConfigPanel()
@@ -126,6 +151,7 @@ class LoginWindow(QWidget):
         testServiceLayout.addLayout(askLayout)
         
         layout = QVBoxLayout()
+        layout.addLayout(connectmode_select_box)
         layout.addLayout(input_layout)
         layout.addLayout(service_select_box)
         layout.addLayout(service_config_box)
@@ -135,16 +161,19 @@ class LoginWindow(QWidget):
         
         # 设置该窗口的布局器为垂直布局器
         self.setLayout(layout)
-       
-        self.readUserInfo()
+        self.ApiMode=1 #1 openapi 2 自定义服务 3 作者的测试服务器
+        
         self.loopflag=True
         self.started=False
         self.center_window()
-        self.ApiMode=1 #1 openapi 2 自定义服务 3 作者的测试服务器
+        
+        self.ConnectMode=1 #1 连接方式 2 连接方式2 
+        self.readUserInfo()
         self.chatgpt_bot=ChatGPTBot(self.openaikey_input.text())
         self.alert.connect(self.deviceInvalid) #
         self.logevent.connect(self.logPrint) #
         self.testaskthread=None
+      
         
     
     def logPrint(self,msg):
@@ -235,7 +264,7 @@ UserCustomBot.result=response.content.decode('utf8')")
         y = (screen_size.height() - window_size.height()) // 2
         # 设置窗口的位置
         self.move(x, y)
-        self.setGeometry(x, y, 900, 400)
+        self.setGeometry(x, y, 1000, 700)
         
     def ask(self,query):
         if self.ApiMode==1:
@@ -251,7 +280,24 @@ UserCustomBot.result=response.content.decode('utf8')")
         elif  self.ApiMode==3:
           pass    
            
-        
+    
+    def connect_mode_select(self):
+        '''接入方式1'''
+        radioButton = self.sender()
+        if radioButton.isChecked():
+            if radioButton.text()=="接入方式1":
+                self.ConnectMode=1
+                self.did_label.hide()
+                self.did_input.hide()
+                self.tts_input_label.hide()
+                self.tts_input.hide()
+            elif radioButton.text()=="接入方式2":
+                self.ConnectMode=2
+                self.did_label.show()
+                self.did_input.show()
+                self.tts_input_label.show()
+                self.tts_input.show()
+                
     def radioClicked(self):
         radioButton = self.sender()
         if radioButton.isChecked():
@@ -261,7 +307,7 @@ UserCustomBot.result=response.content.decode('utf8')")
                 self.usercustom_config.hide()
                 self.auther_config.hide()
                 self.ApiMode=1
-                self.resize(900, 500)
+                self.resize(1000, 700)
             elif radioButton.text()=="你的自定义服务":
                 print("你将使用你的自定义服务")
                 self.openai_config.hide()
@@ -275,7 +321,7 @@ UserCustomBot.result=response.content.decode('utf8')")
                 self.usercustom_config.hide()
                 self.auther_config.show()
                 self.ApiMode=3
-                self.resize(900, 400)
+                self.resize(1000, 700)
                 
             print("选中了：" + radioButton.text())
             
@@ -290,12 +336,23 @@ UserCustomBot.result=response.content.decode('utf8')")
                     self.speaker_input.setText(user_data["speakername"])
                     self.openaikey_input.setText(user_data["chatgptkey"])
                     self.customcode_input.setText(user_data["usercode"])
+                    
+                    if "did" in user_data:
+                        self.did_input.setText(user_data["did"])
+                    if "tts" in user_data:
+                        self.tts_input.setText(user_data["tts"])
+                    if "connectmode" in user_data and user_data["connectmode"]!="":
+                        self.ConnectMode=user_data["connectmode"]
+                        if  self.ConnectMode==2:
+                            self.connectrb2.setChecked(True)
+                            self.did_label.show()
+                            self.did_input.show()
+                            self.tts_input_label.show()
+                            self.tts_input.show()
                 except Exception as e:
                     print(e)
-            
-    def on_login_button_clicked(self):
-        # 在点击登录按钮时触发这个事件处理函数
-        # 获取文本输入框中用户输入的内容
+    
+    def saveconfig(self):
         try:
             username = self.username_input.text()
             password = self.password_input.text()
@@ -304,10 +361,15 @@ UserCustomBot.result=response.content.decode('utf8')")
             usercode=self.customcode_input.toPlainText()
             chatgptkey=self.openaikey_input.text()
             with open(os.path.join(str(Path.home()), ".michatgpt.token"),'w') as f:
-                info={"userid":username,"password":password,"model":device,"speakername":speakername,"chatgptkey":chatgptkey,"usercode":usercode}
+                info={"userid":username,"password":password,"model":device,"speakername":speakername,"chatgptkey":chatgptkey,"usercode":usercode,"did":self.did_input.text(),
+                      "tts":self.tts_input.text(),"connectmode":self.ConnectMode}
                 f.write(json.dumps(info))
         except Exception as e:
             print(e)
+    def on_login_button_clicked(self):
+        # 在点击登录按钮时触发这个事件处理函数
+        # 获取文本输入框中用户输入的内容
+        self.saveconfig()
         # 在这里处理登录逻辑
         # ...
         if self.started==True:
@@ -346,18 +408,65 @@ UserCustomBot.result=response.content.decode('utf8')")
         self.started=False
         self.login_button.setText("开始")
         QMessageBox.warning(self,"警告","没有找到你的音箱")
-        
+    def findttsCommand(self,s):
+        ttscommand=""
+        try:
+            index=s.index("Device_Information")
+            if index<0:
+                index=0
+            if index>=0:
+                s=s[index:]
+                d = {}
+                
+                for line in s.strip().split('\n'):
+                    if "Intelligent_Speaker" in line or "_Play_Text" in line:
+                        if '=' in line and 'Intelligent_Speaker' in line:
+                            key, value = line.split('=')
+                            d[key.strip()] = value.strip()
+                        if  '=' in line and "_Play_Text" in line:
+                            index=line.index('#')
+                            if index>=0:
+                                line=line[0:index]
+                            key, value = line.split('=')
+                            d[key.strip()] = value.strip()
+                            
+
+                # 找到 Intelligent_Speaker 的值和 _Play_Text 的值
+                intelligent_speaker_value = d['Intelligent_Speaker']
+                play_text_value = d['_Play_Text'] 
+                ttscommand=intelligent_speaker_value+"-"+play_text_value
+        except Exception as e:  
+            print(e)
+        return ttscommand
     async def xiaomimain(self):
         try:
             #-------------------------用户配置
             hardware,user_id,password=self.device_input.text(), self.username_input.text(),self.password_input.text()
             wifispeaker_name=self.speaker_input.text()
+            MI_DID=""
             #---------------------------
             LATEST_ASK_API = "https://userprofile.mina.mi.com/device_profile/v2/conversation?source=dialogu&hardware={hardware}&timestamp={timestamp}&limit=2"
             COOKIE_TEMPLATE = "deviceId={device_id}; serviceToken={service_token}; userId={user_id}"
             lastTimeStamp=int(time.time()* 1000)
             async with ClientSession() as session:
                 account = MiAccount(session,user_id,password,os.path.join(str(Path.home()),".mi.token"),)
+                if self.ConnectMode==2:
+                    ioservice = MiIOService(account)
+                    deviceresult = await miio_command(ioservice, MI_DID, "list", '')
+                    print(deviceresult)
+                    for item in deviceresult:
+                        if item["name"]==wifispeaker_name:
+                            MI_DID=item["did"]
+                            if  self.did_input.text()=="":
+                                self.did_input.setText(MI_DID)
+                            MODEl=item["model"]
+                            if MODEl and self.tts_input.text()=="":
+                                    modelresult = await miio_command(ioservice, MI_DID, f"spec {MODEl}", '')
+                                    ttscommand=self.findttsCommand(modelresult)
+                                    self.tts_input.setText(ttscommand)
+                            break
+                    self.saveconfig()
+                           
                 await account.login("micoapi")
                 service = MiNAService(account)#通过这个发送消息
                 deviceresult = await service.device_list()
@@ -405,26 +514,49 @@ UserCustomBot.result=response.content.decode('utf8')")
                         if await get_if_xiaoai_is_playing():
                             await service.player_pause(deviceid)
                             await asyncio.sleep(0.5)    
-                        await service.text_to_speech(deviceid, '')
+                        if self.ConnectMode==1:
+                           await service.text_to_speech(deviceid, '')
+                        else:
+                            await miio_command(ioservice, MI_DID, self.tts_input.text()+" "+"")
                         message=""
                         if "清除消息" in last_record:
                                 message="GPT清除历史消息"
                                 self.logevent.emit("GPT清除历史消息")
-                                await service.text_to_speech(deviceid, message)
+                                if self.ConnectMode==1:
+                                    await service.text_to_speech(deviceid, message)
+                                else:
+                                    await miio_command(ioservice, MI_DID, self.tts_input.text()+" "+message)
+                                
                                 self.clear()
                         elif "停止" in last_record or "休息一下" in last_record:
                             self.logevent.emit("好的")
-                            await service.text_to_speech(deviceid, "好的")
+                            if self.ConnectMode==1:
+                                    await service.text_to_speech(deviceid, "好的")
+                            else:
+                                    await miio_command(ioservice, MI_DID, self.tts_input.text()+" "+"好的")
+                           
                         else:
-                            await service.text_to_speech(deviceid, "正在问大哥GPT请等待")
+                            if self.ConnectMode==1:
+                                    await service.text_to_speech(deviceid, "正在问大哥GPT请等待")
+                            else:
+                                    await miio_command(ioservice, MI_DID, self.tts_input.text()+" "+"正在问大哥GPT请等待")
+                            
                             gpt_result=self.ask(last_record) 
                             if gpt_result=="-1":
                                 self.logevent.emit("出错了无法获取GPT消息")
-                                await service.text_to_speech(deviceid, "出错了无法获取GPT消息")
+                                if self.ConnectMode==1:
+                                    await service.text_to_speech(deviceid, "出错了无法获取GPT消息")
+                                else:
+                                    await miio_command(ioservice, MI_DID, self.tts_input.text()+" "+"出错了无法获取GPT消息")
+                               
                             else:
                                 message+=gpt_result
                                 self.logevent.emit(message)
-                                await service.text_to_speech(deviceid, message)
+                                if self.ConnectMode==1:
+                                    await service.text_to_speech(deviceid, message)
+                                else:
+                                    await miio_command(ioservice, MI_DID, self.tts_input.text()+" "+message)
+                              
                         
                         while True:
                             if not await get_if_xiaoai_is_playing():
