@@ -5,7 +5,8 @@
 打包好的win10二级制程序下载地址如下：  
 链接：https://pan.baidu.com/s/1qQAgac30UmqCEWpI0y_tqQ 
 提取码：inbw     
-
+链接：https://pan.baidu.com/s/1FG05jY7yyzFDOdcgJ19HTQ  (本地中转服务端)   
+提取码：e374   
 连接ChatGPT提供两种方式：  
 1 使用OpenAI Key的方式  
 2 在用户服务代码框内按照规则输入公开免费的HTTP API访问  
