@@ -3,13 +3,11 @@
 使用PyQt5封装了小米音箱连接ChatGPT的客户端，代码大量参考了yihong0618/xiaogpt库的代码,  
 稍微做修改简化，然后使用Pyqt5将代码封装为桌面软件，方便不会编程的人使用 
 打包好的win10二级制程序下载地址如下：  
-链接：https://pan.baidu.com/s/1qQAgac30UmqCEWpI0y_tqQ 
-提取码：inbw     
-链接：https://pan.baidu.com/s/1FG05jY7yyzFDOdcgJ19HTQ  (本地中转服务端)   
-提取码：e374   
+链接：https://pan.baidu.com/s/1GB2NZW51Fd7jyp_Zx-lk7w  提取码：vcnj       
+
 连接ChatGPT提供两种方式：  
 1 使用OpenAI Key的方式  
-2 在用户服务代码框内按照规则输入公开免费的HTTP API访问  
+2 在用户服务代码框内按照规则输入公开免费的HTTP API访问，可以查看我的教程学习如何不用科学上网搭建一个自己的GPT API  
 使用方法：  
 在软件的输入参数中输入  
 (1)用户ID  
