@@ -16,6 +16,9 @@
 (4) 选择连接方式  
 (5) 点击开始按钮  
 (6) 开始与音箱对话  
+
+代码中的MiChatGUI_Baidu.py文件是小米音箱调用文心一言的例子  
+
 参考代码：  
 yihong0618/xiaogpt  
 https://github.com/yihong0618/xiaogpt  
