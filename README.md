@@ -18,6 +18,9 @@
 (6) 开始与音箱对话  
 
 代码中的MiChatGUI_Baidu.py文件是小米音箱调用文心一言的例子  
+下面的链接可以下载我打包好的windows端的应用程序可以直接使用
+链接：https://pan.baidu.com/s/1M5hGJcUCgFfAeCF736xy8g   
+提取码：ed1j  
 
 参考代码：  
 yihong0618/xiaogpt  
